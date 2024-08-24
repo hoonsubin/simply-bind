@@ -24,24 +24,24 @@ export const checkFileExtMatch = (filePath: string, ext: string[]) => {
   return ext.includes(getFileExt(filePath));
 };
 
-export const getAllFilesInDir = async (
-  basePath: string,
-  extFilter?: string[]
-) => {
-  const filesInDir = await readDir(basePath, { recursive: false });
+// export const getAllFilesInDir = async (
+//   basePath: string,
+//   extFilter?: string[]
+// ) => {
+//   const filesInDir = await readDir(basePath, { recursive: false });
 
-  if (!filesInDir) {
-    return [];
-  }
+//   if (!filesInDir) {
+//     return [];
+//   }
 
-  if (extFilter) {
-    return _.filter(filesInDir, (file) => {
-      return file.name && !file.children && extFilter.includes(file.name!);
-    });
-  }
+//   if (extFilter) {
+//     return _.filter(filesInDir, (file) => {
+//       return file.name && !file.children && extFilter.includes(file.name!);
+//     });
+//   }
 
-  return filesInDir;
-};
+//   return filesInDir;
+// };
 
 export const getAllFolderOrZip = (entry: FileEntry[]) => {
   const foldersOrZip: FileEntry[] = [];
@@ -75,14 +75,14 @@ export const getAllFolderOrZip = (entry: FileEntry[]) => {
 };
 
 export const readZipFile = async (zipPath: string) => {
-  const zipData = await readBinaryFile(zipPath);
+  const zipData = await readBinaryFile(zipPath); // todo: needs to be optimized
 
   return await JSZip.loadAsync(zipData);
 };
 
 export const webpToPng = async (webpData: Uint8Array) => {
   // Create an image from the WebP data
-  const img = await createImageBitmap(new Blob([webpData]));
+  const img = await createImageBitmap(new Blob([webpData])); // todo: can it be optimized?
 
   // Create a canvas element to draw the image
   const canvas = document.createElement("canvas");
@@ -113,61 +113,40 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
 
   console.log("Creating a new PDF document");
 
-  // todo: must convert webp to png before loading
-  const imageData = await Promise.all(
-    _.map(imgPagePaths, async (i) => {
-      const imgBin = await readBinaryFile(i);
-      const imgExt = getFileExt(i);
-      console.log("Extracted image with the extension ", imgExt);
-      return {
-        imgBin,
-        imgExt,
-      };
-    })
-  );
+  for (const imgPath of imgPagePaths) {
+    const imgBin = await readBinaryFile(imgPath);
+    const imgExt = getFileExt(imgPath);
 
-  for (let i = 0; i < imageData.length; i++) {
-    const currentImgBin = imageData[i].imgBin;
-    const imgExt = imageData[i].imgExt;
-
-    console.log(`Processing page ${imgPagePaths[i]}`);
+    console.log(`Processing page ${imgPath}`);
 
     let imageToAdd: PDFImage;
 
     switch (imgExt) {
       case "png":
-        imageToAdd = await pdfDoc.embedPng(currentImgBin);
+        imageToAdd = await pdfDoc.embedPng(imgBin);
         break;
       case "jpg":
       case "jpeg":
-        imageToAdd = await pdfDoc.embedJpg(currentImgBin);
+        imageToAdd = await pdfDoc.embedJpg(imgBin);
         break;
       case "webp":
-        // convert the image to pdf if its a webp
-        console.log("Found a webp file. Converting to png before adding the page");
-        const pngFromWebp = await webpToPng(currentImgBin);
+        const pngFromWebp = await webpToPng(imgBin);
         imageToAdd = await pdfDoc.embedPng(pngFromWebp);
         break;
       default:
         throw new Error(`File extension ${imgExt} is not supported`);
     }
 
-    // if (!imageToAdd) {
-    //   throw new Error("Failed to prepare image to be embedded to the PDF");
-    // }
-
+    // note: this part will progressively get bigger as the number of processed images increase
+    // we need to find a way to process images into chunks, save it before processing the next chunk
     const page = pdfDoc.addPage([imageToAdd.width, imageToAdd.height]);
-    
     page.drawImage(imageToAdd, {
       x: 0,
       y: 0,
       width: imageToAdd.width,
       height: imageToAdd.height,
     });
-
-    console.log("Added a new page");
   }
-
   return await pdfDoc.save();
 };
 
