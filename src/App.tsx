@@ -2,7 +2,7 @@ import FileUpload from "./components/FileUpload";
 import CollectionList from "./components/CollectionList";
 import { useState, useCallback } from "react";
 import { DocumentItem } from "./types";
-import { CButton, CCard, CCardBody } from "@coreui/react";
+import { CButton } from "@coreui/react";
 import { downloadDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/api/dialog";
 import * as helpers from "./helpers";
@@ -20,9 +20,9 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
 
   const onClickExport = useCallback(() => {
-    console.log("Clicked export");
+    setIsLoading(true);
+
     const exportPdf = async () => {
-      setIsLoading(true);
       const saveLoc = await open({
         multiple: false,
         directory: true,
@@ -40,28 +40,27 @@ function App() {
       if (files.length > 0) {
         console.log(`There are ${files.length} collections`);
 
-        _.forEach(files, async (i) => {
-          await helpers.createPdfFromCollection(i, saveLoc.toString());
-        });
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          await helpers.createPdfFromCollection(file, saveLoc.toString());
+        }
       }
+
+      setIsLoading(false);
     };
 
-    exportPdf().finally(() => {
-      setIsLoading(false);
-    });
+    exportPdf();
   }, [files]);
 
   return (
     <div className="container">
       <FileUpload onFileSelect={(i) => setFiles(i)} />
       <CollectionList collections={files} />
-      <CButton
-        color="primary"
-        disabled={!files.length || isLoading}
-        onClick={onClickExport}
-      >
-        Export Document
-      </CButton>
+      {files.length > 0 && (
+        <CButton color="primary" disabled={isLoading} onClick={onClickExport}>
+          Export Document
+        </CButton>
+      )}
     </div>
   );
 }

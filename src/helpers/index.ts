@@ -8,7 +8,7 @@ import { join } from "@tauri-apps/api/path";
 import { PDFDocument, PDFImage } from "pdf-lib";
 import _ from "lodash";
 import JSZip from "jszip";
-import { FileItem, DocumentItem } from "../types";
+import { DocumentItem } from "../types";
 
 export const getFileExt = (filePath: string) => {
   const ext = filePath.toLowerCase().split(".").pop();
@@ -130,6 +130,8 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
     const currentImgBin = imageData[i].imgBin;
     const imgExt = imageData[i].imgExt;
 
+    console.log(`Processing page ${imgPagePaths[i]}`);
+
     let imageToAdd: PDFImage;
 
     switch (imgExt) {
@@ -142,6 +144,7 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
         break;
       case "webp":
         // convert the image to pdf if its a webp
+        console.log("Found a webp file. Converting to png before adding the page");
         const pngFromWebp = await webpToPng(currentImgBin);
         imageToAdd = await pdfDoc.embedPng(pngFromWebp);
         break;
@@ -154,13 +157,15 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
     // }
 
     const page = pdfDoc.addPage([imageToAdd.width, imageToAdd.height]);
-
+    
     page.drawImage(imageToAdd, {
       x: 0,
       y: 0,
       width: imageToAdd.width,
       height: imageToAdd.height,
     });
+
+    console.log("Added a new page");
   }
 
   return await pdfDoc.save();
@@ -179,7 +184,7 @@ export const createPdfFromCollection = async (
     console.log(
       `Converting collection ${doc.collectionName} in ${doc.basePath}`
     );
-    // todo: implement folder collection to a pdf
+    // todo: because we load everything to memory, this function will quickly run out of memory
     const pdfBin = await createPdfFromImages(
       _.map(doc.content, (i) => {
         return i.path;

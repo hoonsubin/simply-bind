@@ -131,6 +131,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
   };
 
   const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    // todo: fix this
     event.preventDefault();
     const items = event.dataTransfer.items;
 
@@ -180,6 +181,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
       directory: true,
       recursive: false,
     });
+
+    if (!selected) {
+      console.error('User did not select a folder');
+      setLoading(false);
+      return
+    }
 
     if (Array.isArray(selected)) {
       // gets all the files in the selected directory
