@@ -99,7 +99,8 @@ const webpToPngRust = async (webpData: Uint8Array) => {
 };
 
 const createPdfFromImages = async (imgPagePaths: string[]) => {
-  // todo: this function is broken
+  // todo: this function does not scale well. Maybe add pages in chunks?
+  // for example, if the pdf doesn't already exist, create a new one and write first chunk, next loop will load the written file and add the next chunk
   const pdfDoc = await PDFDocument.create();
 
   console.log("Creating a new PDF document");
@@ -131,7 +132,6 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
       default:
         throw new Error(`File extension ${imgExt} is not supported`);
     }
-
     // note: this part will progressively get bigger as the number of processed images increase
     // we need to find a way to process images into chunks, save it before processing the next chunk
     const page = pdfDoc.addPage([imageToAdd.width, imageToAdd.height]);
@@ -142,7 +142,7 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
       height: imageToAdd.height,
     });
   }
-  return await pdfDoc.save();
+  return await pdfDoc.save({ useObjectStreams: true });
 };
 
 export const createPdfFromCollection = async (
@@ -164,9 +164,11 @@ export const createPdfFromCollection = async (
         return i.path;
       })
     );
+
     const docName = doc.collectionName + ".pdf";
     const savePath = await join(outputPath, docName);
-    await writeBinaryFile(savePath, pdfBin);
+
+    await writeBinaryFile(savePath, pdfBin); // note: the app runs out of memory here
     console.log(`Saved new PDF ${doc.collectionName} to ${savePath}`);
   }
 };

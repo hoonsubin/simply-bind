@@ -51,6 +51,7 @@ function App() {
 
     exportPdf().catch((err) => {
       console.error(err);
+      setIsLoading(false);
     });
   }, [files]);
 
