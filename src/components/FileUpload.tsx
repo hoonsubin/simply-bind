@@ -91,33 +91,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
     if (zipFiles.length > 0) {
       // note: we cannot assume that all zip file will contain exclusively image files
 
-      // note: this block is too time consuming just to load the zip content. Therefore, we only take the base zip collection
-      /*
-      const loadedZipDocs = await Promise.all(
-        _.map(zipFiles, async (i) => {
-          const loadedZip = await helpers.readZipFile(i.path);
-          console.log("processed zip files: ", loadedZip.files);
-
-          return {
-            collectionName: i.name!,
-            basePath: i.path,
-            content: _.map(loadedZip.files, (j) => {
-              return {
-                name: j.name,
-                path: j.name,
-              };
-            }),
-            isArchive: true,
-          } as DocumentItem;
-        })
-      );
-
-      processedFiles.push(...loadedZipDocs);
-      */
-
       const zipCollections = _.map(zipFiles, (i) => {
         return {
-          collectionName: i.name,
+          collectionName: i.name, // note: this will include the file extension. Maybe we might want to remove it?
           basePath: i.path,
           content: [],
           isArchive: true,

@@ -49,7 +49,9 @@ function App() {
       setIsLoading(false);
     };
 
-    exportPdf();
+    exportPdf().catch((err) => {
+      console.error(err);
+    });
   }, [files]);
 
   return (

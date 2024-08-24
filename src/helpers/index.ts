@@ -1,14 +1,10 @@
-import {
-  FileEntry,
-  readDir,
-  readBinaryFile,
-  writeBinaryFile,
-} from "@tauri-apps/api/fs";
+import { FileEntry, readBinaryFile, writeBinaryFile } from "@tauri-apps/api/fs";
 import { join } from "@tauri-apps/api/path";
 import { PDFDocument, PDFImage } from "pdf-lib";
 import _ from "lodash";
 import JSZip from "jszip";
 import { DocumentItem } from "../types";
+import { invoke } from "@tauri-apps/api/tauri";
 
 export const getFileExt = (filePath: string) => {
   const ext = filePath.toLowerCase().split(".").pop();
@@ -23,25 +19,6 @@ export const getFileExt = (filePath: string) => {
 export const checkFileExtMatch = (filePath: string, ext: string[]) => {
   return ext.includes(getFileExt(filePath));
 };
-
-// export const getAllFilesInDir = async (
-//   basePath: string,
-//   extFilter?: string[]
-// ) => {
-//   const filesInDir = await readDir(basePath, { recursive: false });
-
-//   if (!filesInDir) {
-//     return [];
-//   }
-
-//   if (extFilter) {
-//     return _.filter(filesInDir, (file) => {
-//       return file.name && !file.children && extFilter.includes(file.name!);
-//     });
-//   }
-
-//   return filesInDir;
-// };
 
 export const getAllFolderOrZip = (entry: FileEntry[]) => {
   const foldersOrZip: FileEntry[] = [];
@@ -81,10 +58,10 @@ export const readZipFile = async (zipPath: string) => {
 };
 
 export const webpToPng = async (webpData: Uint8Array) => {
-  // Create an image from the WebP data
+  // create an image from the WebP data
   const img = await createImageBitmap(new Blob([webpData])); // todo: can it be optimized?
 
-  // Create a canvas element to draw the image
+  // create a canvas element to draw the image
   const canvas = document.createElement("canvas");
   canvas.width = img.width;
   canvas.height = img.height;
@@ -99,12 +76,26 @@ export const webpToPng = async (webpData: Uint8Array) => {
   // convert the canvas content to a PNG data URL
   const pngUri = canvas.toDataURL("image/png");
 
-  // note: this might be too much overhead. Need to find a better way in the future
+  // todo: this might be too much overhead. Need to find a better way in the future
   const pngResponse = await fetch(pngUri);
   const pngBlob = await pngResponse.blob();
   const pngArrayBuffer = await pngBlob.arrayBuffer();
 
   return new Uint8Array(pngArrayBuffer);
+};
+
+const webpToPngRust = async (webpData: Uint8Array) => {
+  console.log("Converting webp through Rust");
+  const convertedImg = await invoke("convert_webp_to_png", {
+    webpData: Array.from(webpData),
+  });
+  if (typeof convertedImg === "string") {
+    throw new Error(convertedImg);
+  }
+
+  console.log("Converted data from Rust", convertedImg);
+  // trust issues
+  return new Uint8Array(convertedImg as Uint8Array);
 };
 
 const createPdfFromImages = async (imgPagePaths: string[]) => {
@@ -114,6 +105,7 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
   console.log("Creating a new PDF document");
 
   for (const imgPath of imgPagePaths) {
+    // todo: optimize this operation
     const imgBin = await readBinaryFile(imgPath);
     const imgExt = getFileExt(imgPath);
 
@@ -130,7 +122,10 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
         imageToAdd = await pdfDoc.embedJpg(imgBin);
         break;
       case "webp":
-        const pngFromWebp = await webpToPng(imgBin);
+        const pngFromWebp = await webpToPngRust(imgBin);
+        console.log(
+          `Embedding the converted image with the size of ${pngFromWebp.length} to the document`
+        );
         imageToAdd = await pdfDoc.embedPng(pngFromWebp);
         break;
       default:
