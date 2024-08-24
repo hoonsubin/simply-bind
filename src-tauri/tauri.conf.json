@@ -18,20 +18,24 @@
       },
       "fs": {
         "readDir": true,
+        "readFile": true,
         "scope": [
           "**"
         ]
       },
       "path": {
         "all": true
+      },
+      "dialog": {
+        "all": true
       }
     },
     "windows": [
       {
         "title": "tauri-app",
-        "fileDropEnabled": true,
-        "width": 800,
-        "height": 600
+        "fileDropEnabled": false,
+        "width": 1280,
+        "height": 800
       }
     ],
     "security": {

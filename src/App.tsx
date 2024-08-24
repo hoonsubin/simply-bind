@@ -1,21 +1,22 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/tauri";
 import FileUpload from "./components/FileUpload";
-import "./App.css";
+import CollectionList from "./components/CollectionList";
+import { useState } from "react";
+import { DocumentItem } from "./types";
+
+import '@coreui/coreui/dist/css/coreui.min.css'
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  // async function greet() {
+  //   // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
+  //   setGreetMsg(await invoke("greet", { name }));
+  // }
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-    setGreetMsg(await invoke("greet", { name }));
-  }
+  const [files, setFiles] = useState<DocumentItem[]>([]);
 
   return (
     <div className="container">
-      <FileUpload />
+      <FileUpload onFileSelect={(i) => setFiles(i)} />
+      <CollectionList collections={files} />
     </div>
   );
 }
