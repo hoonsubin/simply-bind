@@ -14,6 +14,7 @@ type FileUploadProps = {
 
 const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
   const [files, setFiles] = useState<DocumentItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     onFileSelect(files);
@@ -69,6 +70,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
         collectionName: collectionName,
         basePath: path,
         content: _.sortBy(collectionContent, ["name"]),
+        isArchive: false,
       };
 
       processedFiles.push(rootCollection);
@@ -87,18 +89,42 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
 
     // handling zip files of image collection
     if (zipFiles.length > 0) {
-      // todo: handle zip image collection behavior. Note that this function is extremely slow!
       // note: we cannot assume that all zip file will contain exclusively image files
-      // const loadedZipBin = await Promise.all(
-      //   _.map(zipFiles, async (i) => {
-      //     return await readBinaryFile(i.path);
-      //   })
-      // );
-      // const zipContents = await Promise.all(
-      //   _.map(loadedZipBin, async (i) => {
-      //     return (await JSZip.loadAsync(i)).files;
-      //   })
-      // );
+
+      // note: this block is too time consuming just to load the zip content. Therefore, we only take the base zip collection
+      /*
+      const loadedZipDocs = await Promise.all(
+        _.map(zipFiles, async (i) => {
+          const loadedZip = await helpers.readZipFile(i.path);
+          console.log("processed zip files: ", loadedZip.files);
+
+          return {
+            collectionName: i.name!,
+            basePath: i.path,
+            content: _.map(loadedZip.files, (j) => {
+              return {
+                name: j.name,
+                path: j.name,
+              };
+            }),
+            isArchive: true,
+          } as DocumentItem;
+        })
+      );
+
+      processedFiles.push(...loadedZipDocs);
+      */
+
+      const zipCollections = _.map(zipFiles, (i) => {
+        return {
+          collectionName: i.name,
+          basePath: i.path,
+          content: [],
+          isArchive: true,
+        } as DocumentItem;
+      });
+
+      processedFiles.push(...zipCollections);
     }
 
     return processedFiles;
@@ -146,6 +172,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
   };
 
   const handleSelectButtonClick = async () => {
+    // show loading effect
+    setLoading(true);
+
     const selected = await open({
       multiple: true,
       directory: true,
@@ -160,6 +189,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
 
       const fileItems = (await Promise.all(filePromises)).flat();
       setFiles(fileItems);
+      setLoading(false);
     }
   };
 
@@ -178,8 +208,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
           >
             Drag and drop
           </div>
-          <CButton color="primary" onClick={handleSelectButtonClick}>
-            Select Files or Folders
+          <CButton
+            color="primary"
+            onClick={handleSelectButtonClick}
+            disabled={loading}
+          >
+            {loading ? "Loading files..." : "Select Files or Folders"}
           </CButton>
         </CCardBody>
       </CCard>

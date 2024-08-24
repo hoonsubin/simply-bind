@@ -6,5 +6,6 @@ export interface FileItem {
 export interface DocumentItem {
   collectionName: string;
   basePath: string;
+  isArchive: boolean;
   content: FileItem[];
 }

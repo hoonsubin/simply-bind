@@ -1,30 +1,27 @@
-import { FileEntry } from "@tauri-apps/api/fs";
-import { readDir } from "@tauri-apps/api/fs";
+import {
+  FileEntry,
+  readDir,
+  readBinaryFile,
+  writeBinaryFile,
+} from "@tauri-apps/api/fs";
+import { join } from "@tauri-apps/api/path";
+import { PDFDocument, PDFImage } from "pdf-lib";
 import _ from "lodash";
+import JSZip from "jszip";
+import { FileItem, DocumentItem } from "../types";
 
-export const checkFileExtMatch = (filePath: string, ext: string[]) => {
-  // const fileExt = filePath.toLowerCase().split(".").pop();
-  // if (!fileExt) {
-  //   throw new Error(`${filePath} is not a valid file`);
-  // }
+export const getFileExt = (filePath: string) => {
+  const ext = filePath.toLowerCase().split(".").pop();
 
-  // for (let i = 0; i++; i < ext.length) {
-  //   // remove the . text to ensure all inputs are in the same format
-  //   const cleanExt = ext[i].replace(".", "");
-  //   if (fileExt.includes(cleanExt)) {
-  //     return true;
-  //   }
-  // }
-
-  // return false;
-
-  // Filter files that match the extensions
-  const fileExt = filePath.toLowerCase().split(".").pop();
-  if (!fileExt) {
-    throw new Error(`${filePath} is not a valid file`);
+  if (!ext) {
+    throw new Error(`${filePath} does not have an extension`);
   }
 
-  return ext.includes(fileExt);
+  return ext;
+};
+
+export const checkFileExtMatch = (filePath: string, ext: string[]) => {
+  return ext.includes(getFileExt(filePath));
 };
 
 export const getAllFilesInDir = async (
@@ -53,7 +50,7 @@ export const getAllFolderOrZip = (entry: FileEntry[]) => {
     return [];
   }
 
-  for (let i = 0; i++; i < entry.length) {
+  for (let i = 0; i < entry.length; i++) {
     const file = entry[i];
     // skip if it's a special directory (e.g., '.' or '..')
     if (!file.name) {
@@ -75,4 +72,122 @@ export const getAllFolderOrZip = (entry: FileEntry[]) => {
   }
 
   return foldersOrZip;
+};
+
+export const readZipFile = async (zipPath: string) => {
+  const zipData = await readBinaryFile(zipPath);
+
+  return await JSZip.loadAsync(zipData);
+};
+
+export const webpToPng = async (webpData: Uint8Array) => {
+  // Create an image from the WebP data
+  const img = await createImageBitmap(new Blob([webpData]));
+
+  // Create a canvas element to draw the image
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Cannot find context 2d in the canvas!");
+  }
+
+  ctx.drawImage(img, 0, 0);
+
+  // convert the canvas content to a PNG data URL
+  const pngUri = canvas.toDataURL("image/png");
+
+  // note: this might be too much overhead. Need to find a better way in the future
+  const pngResponse = await fetch(pngUri);
+  const pngBlob = await pngResponse.blob();
+  const pngArrayBuffer = await pngBlob.arrayBuffer();
+
+  return new Uint8Array(pngArrayBuffer);
+};
+
+const createPdfFromImages = async (imgPagePaths: string[]) => {
+  // todo: this function is broken
+  const pdfDoc = await PDFDocument.create();
+
+  console.log("Creating a new PDF document");
+
+  // todo: must convert webp to png before loading
+  const imageData = await Promise.all(
+    _.map(imgPagePaths, async (i) => {
+      const imgBin = await readBinaryFile(i);
+      const imgExt = getFileExt(i);
+      console.log("Extracted image with the extension ", imgExt);
+      return {
+        imgBin,
+        imgExt,
+      };
+    })
+  );
+
+  for (let i = 0; i < imageData.length; i++) {
+    const currentImgBin = imageData[i].imgBin;
+    const imgExt = imageData[i].imgExt;
+
+    let imageToAdd: PDFImage;
+
+    switch (imgExt) {
+      case "png":
+        imageToAdd = await pdfDoc.embedPng(currentImgBin);
+        break;
+      case "jpg":
+      case "jpeg":
+        imageToAdd = await pdfDoc.embedJpg(currentImgBin);
+        break;
+      case "webp":
+        // convert the image to pdf if its a webp
+        const pngFromWebp = await webpToPng(currentImgBin);
+        imageToAdd = await pdfDoc.embedPng(pngFromWebp);
+        break;
+      default:
+        throw new Error(`File extension ${imgExt} is not supported`);
+    }
+
+    // if (!imageToAdd) {
+    //   throw new Error("Failed to prepare image to be embedded to the PDF");
+    // }
+
+    const page = pdfDoc.addPage([imageToAdd.width, imageToAdd.height]);
+
+    page.drawImage(imageToAdd, {
+      x: 0,
+      y: 0,
+      width: imageToAdd.width,
+      height: imageToAdd.height,
+    });
+  }
+
+  return await pdfDoc.save();
+};
+
+export const createPdfFromCollection = async (
+  doc: DocumentItem,
+  outputPath: string
+) => {
+  if (doc.isArchive) {
+    // todo: implement convert zip content to pdf
+    console.log(
+      `Skipping ${doc.collectionName} as zip support is not added yet`
+    );
+  } else {
+    console.log(
+      `Converting collection ${doc.collectionName} in ${doc.basePath}`
+    );
+    // todo: implement folder collection to a pdf
+    const pdfBin = await createPdfFromImages(
+      _.map(doc.content, (i) => {
+        return i.path;
+      })
+    );
+    const docName = doc.collectionName + ".pdf";
+    const savePath = await join(outputPath, docName);
+    await writeBinaryFile(savePath, pdfBin);
+    console.log(`Saved new PDF ${doc.collectionName} to ${savePath}`);
+  }
 };
