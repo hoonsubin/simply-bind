@@ -1,10 +1,10 @@
-import { FileEntry, readBinaryFile, writeBinaryFile } from "@tauri-apps/api/fs";
-import { join } from "@tauri-apps/api/path";
-import { PDFDocument, PDFImage } from "pdf-lib";
+import { FileEntry, readBinaryFile, writeBinaryFile } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/plugin-path";
 import _ from "lodash";
 import JSZip from "jszip";
 import { DocumentItem } from "../types";
-import { invoke } from "@tauri-apps/api/tauri";
+import { invoke } from "@tauri-apps/api/core";
+import { PDFDocument, PDFImage } from "pdf-lib";
 
 export const getFileExt = (filePath: string) => {
   const ext = filePath.toLowerCase().split(".").pop();
