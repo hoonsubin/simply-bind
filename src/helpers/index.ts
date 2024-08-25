@@ -158,7 +158,8 @@ export const createPdfFromCollection = async (
     console.log(
       `Converting collection ${doc.collectionName} in ${doc.basePath}`
     );
-    // todo: because we load everything to memory, this function will quickly run out of memory
+
+    // note: this can get really big
     const pdfBin = await createPdfFromImages(
       _.map(doc.content, (i) => {
         return i.path;
@@ -168,16 +169,18 @@ export const createPdfFromCollection = async (
     const docName = doc.collectionName + ".pdf";
     const savePath = await join(outputPath, docName);
 
-    //await writeBinaryFile(savePath, pdfBin); // note: the app runs out of memory here
-    await saveUint8ArrayInChunks(pdfBin, savePath);
+    //await writeBinaryFile(savePath, pdfBin); // note: the app runs out of memory here if the file size is large
+
+    await writeBinaryInChunks(savePath, pdfBin);
+
     console.log(`Saved new PDF ${doc.collectionName} to ${savePath}`);
   }
 };
 
-export const saveUint8ArrayInChunks = async (
-  data: Uint8Array,
+export const writeBinaryInChunks = async (
   destinationPath: string,
-  chunkSize: number = 1024 * 1024
+  data: Uint8Array,
+  chunkSize: number = 1024 * 1024 * 8 // 8 MB
 ) => {
   let offset = 0;
 
@@ -192,7 +195,7 @@ export const saveUint8ArrayInChunks = async (
     // Extract the current chunk from the Uint8Array
     const chunk = data.slice(offset, end);
 
-    // todo: although this does work without crashing, the file format is unrecognizable
+    // todo: there is an issue with the chunk saving, where not all the bytes will be saved correctly
     // Write the chunk to the destination file
     await writeBinaryFile(
       { path: destinationPath, contents: chunk },
@@ -201,6 +204,6 @@ export const saveUint8ArrayInChunks = async (
 
     // Move the offset forward by the size of the chunk
     offset = end;
-    console.log(`Saved ${offset} bytes`);
+    console.log(`Wrote chunk from ${offset} to ${end} (${chunk.length} bytes)`);
   }
 };
