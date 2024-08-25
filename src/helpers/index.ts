@@ -168,7 +168,39 @@ export const createPdfFromCollection = async (
     const docName = doc.collectionName + ".pdf";
     const savePath = await join(outputPath, docName);
 
-    await writeBinaryFile(savePath, pdfBin); // note: the app runs out of memory here
+    //await writeBinaryFile(savePath, pdfBin); // note: the app runs out of memory here
+    await saveUint8ArrayInChunks(pdfBin, savePath);
     console.log(`Saved new PDF ${doc.collectionName} to ${savePath}`);
+  }
+};
+
+export const saveUint8ArrayInChunks = async (
+  data: Uint8Array,
+  destinationPath: string,
+  chunkSize: number = 1024 * 1024
+) => {
+  let offset = 0;
+
+  console.log(
+    `Saving the data with the size of ${data.length} into chunks of ${chunkSize}`
+  );
+
+  while (offset < data.length) {
+    // Calculate the end of the current chunk
+    const end = Math.min(offset + chunkSize, data.length);
+
+    // Extract the current chunk from the Uint8Array
+    const chunk = data.slice(offset, end);
+
+    // todo: although this does work without crashing, the file format is unrecognizable
+    // Write the chunk to the destination file
+    await writeBinaryFile(
+      { path: destinationPath, contents: chunk },
+      { append: true }
+    );
+
+    // Move the offset forward by the size of the chunk
+    offset = end;
+    console.log(`Saved ${offset} bytes`);
   }
 };
