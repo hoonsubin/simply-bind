@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { open } from "@tauri-apps/api/dialog";
-import { readDir } from "@tauri-apps/api/fs";
-import { dirname, basename } from "@tauri-apps/api/path";
+import { open } from "@tauri-apps/plugin-dialog";
+import { readDir } from "@tauri-apps/plugin-fs";
+import { basename, join } from "@tauri-apps/api/path";
 import { appConfig } from "../config";
 import { FileItem, DocumentItem } from "../types";
 import * as helpers from "../helpers";
@@ -20,29 +20,24 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
   }, [files]);
 
   const processDir = async (path: string) => {
-    // todo: implement this
-    // check the base folder for all zip or image files and subdirectories
-    // check all subdirectories for zip or image files
-    // create a collection for all folders (and zip) of image files
-
     let processedFiles: DocumentItem[] = [];
 
-    const files = await readDir(path, { recursive: false });
+    const files = await readDir(path);
 
     if (!files) {
       return [];
     }
     const imageFiles = files.filter((file) => {
       return (
-        file.name &&
-        helpers.checkFileExtMatch(file.path, appConfig.supportedImgFormat)
+        file.isFile &&
+        helpers.checkFileExtMatch(file.name, appConfig.supportedImgFormat)
       );
     });
     const zipFiles = files.filter((file) => {
-      return file.name && helpers.checkFileExtMatch(file.path, ["zip"]);
+      return file.isFile && helpers.checkFileExtMatch(file.name, ["zip"]);
     });
     const folders = files.filter((file) => {
-      return !!file.children;
+      return !!file.isDirectory;
     });
 
     if (!imageFiles && !zipFiles && !folders) {
@@ -54,16 +49,20 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
       zipFiles,
       folders,
     });
+
     // handling image collections in the base dir
     if (imageFiles.length > 0) {
       // create a root collection
-      const collectionName = await basename(await dirname(imageFiles[0].path));
-      const collectionContent = _.map(imageFiles, (i) => {
-        return {
-          name: i.name!,
-          path: i.path,
-        } as FileItem;
-      });
+      const collectionName = await basename(path);
+
+      const collectionContent = await Promise.all(
+        _.map(imageFiles, async (i) => {
+          return {
+            name: i.name,
+            path: await join(path, i.name),
+          } as FileItem;
+        })
+      );
 
       const rootCollection: DocumentItem = {
         collectionName: collectionName,
@@ -78,7 +77,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
     if (folders.length > 0) {
       // todo: handle folder image collection behavior
       const subDocs = _.map(folders, async (folder) => {
-        return await processDir(folder.path);
+        return await processDir(await join(path, folder.name));
       });
 
       const processedSubDirs = (await Promise.all(subDocs)).flat();
@@ -101,6 +100,8 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
       // );
     }
 
+    console.log("Processed collections ", processedFiles);
+
     return processedFiles;
   };
 
@@ -117,9 +118,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
         }
       }
 
-      Promise.all(filePromises).then((fileItems) => {
-        //setFiles(fileItems.flat());
-      });
+      // Promise.all(filePromises).then((fileItems) => {
+      //   setFiles(fileItems.flat());
+      // });
     }
   }, []);
 
