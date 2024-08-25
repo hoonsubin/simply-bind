@@ -90,14 +90,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
     if (zipFiles.length > 0) {
       // note: we cannot assume that all zip file will contain exclusively image files
 
-      const zipCollections = _.map(zipFiles, (i) => {
-        return {
-          collectionName: i.name, // note: this will include the file extension. Maybe we might want to remove it?
-          basePath: i.path,
-          content: [],
-          isArchive: true,
-        } as DocumentItem;
-      });
+      const zipCollections = await Promise.all(
+        _.map(zipFiles, async (i) => {
+          return {
+            collectionName: i.name, // note: this will include the file extension. Maybe we might want to remove it?
+            basePath: await join(path, i.name),
+            content: [],
+            isArchive: true,
+          } as DocumentItem;
+        })
+      );
 
       processedFiles.push(...zipCollections);
     }
@@ -160,9 +162,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
     });
 
     if (!selected) {
-      console.error('User did not select a folder');
+      console.error("User did not select a folder");
       setLoading(false);
-      return
+      return;
     }
 
     if (Array.isArray(selected)) {
