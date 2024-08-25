@@ -1,5 +1,5 @@
-import { FileEntry, readBinaryFile, writeBinaryFile } from "@tauri-apps/plugin-fs";
-import { join } from "@tauri-apps/plugin-path";
+import { readFile, writeFile } from "@tauri-apps/plugin-fs";
+import { join } from "@tauri-apps/api/path";
 import _ from "lodash";
 import JSZip from "jszip";
 import { DocumentItem } from "../types";
@@ -20,39 +20,8 @@ export const checkFileExtMatch = (filePath: string, ext: string[]) => {
   return ext.includes(getFileExt(filePath));
 };
 
-export const getAllFolderOrZip = (entry: FileEntry[]) => {
-  const foldersOrZip: FileEntry[] = [];
-
-  if (!entry) {
-    return [];
-  }
-
-  for (let i = 0; i < entry.length; i++) {
-    const file = entry[i];
-    // skip if it's a special directory (e.g., '.' or '..')
-    if (!file.name) {
-      continue;
-    }
-
-    // if the entry is a subdirectory
-    if (file.children) {
-      foldersOrZip.push(file);
-    } else {
-      // only add zip files
-      if (checkFileExtMatch(file.path, ["zip"])) {
-        foldersOrZip.push(file);
-      } else {
-        // skip if it's not a sub dir or a zip file
-        continue;
-      }
-    }
-  }
-
-  return foldersOrZip;
-};
-
 export const readZipFile = async (zipPath: string) => {
-  const zipData = await readBinaryFile(zipPath); // todo: needs to be optimized
+  const zipData = await readFile(zipPath); // todo: needs to be optimized
 
   return await JSZip.loadAsync(zipData);
 };
@@ -107,7 +76,7 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
 
   for (const imgPath of imgPagePaths) {
     // todo: optimize this operation
-    const imgBin = await readBinaryFile(imgPath);
+    const imgBin = await readFile(imgPath);
     const imgExt = getFileExt(imgPath);
 
     console.log(`Processing page ${imgPath}`);
@@ -197,10 +166,7 @@ export const writeBinaryInChunks = async (
 
     // todo: there is an issue with the chunk saving, where not all the bytes will be saved correctly
     // Write the chunk to the destination file
-    await writeBinaryFile(
-      { path: destinationPath, contents: chunk },
-      { append: true }
-    );
+    await writeFile(destinationPath, chunk, { append: true });
 
     // Move the offset forward by the size of the chunk
     offset = end;

@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { DocumentItem } from "./types";
 import { CButton } from "@coreui/react";
 import { downloadDir } from "@tauri-apps/api/path";
-import { open } from "@tauri-apps/api/dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import * as helpers from "./helpers";
 import _ from "lodash";
 
