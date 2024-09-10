@@ -28,7 +28,7 @@ export const readZipFile = async (zipPath: string) => {
 
 export const webpToPng = async (webpData: Uint8Array) => {
   // create an image from the WebP data
-  const img = await createImageBitmap(new Blob([webpData])); // todo: can it be optimized?
+  const img = await createImageBitmap(new Blob([webpData]));
 
   // create a canvas element to draw the image
   const canvas = document.createElement("canvas");
@@ -45,7 +45,6 @@ export const webpToPng = async (webpData: Uint8Array) => {
   // convert the canvas content to a PNG data URL
   const pngUri = canvas.toDataURL("image/png");
 
-  // todo: this might be too much overhead. Need to find a better way in the future
   const pngResponse = await fetch(pngUri);
   const pngBlob = await pngResponse.blob();
   const pngArrayBuffer = await pngBlob.arrayBuffer();
@@ -54,7 +53,6 @@ export const webpToPng = async (webpData: Uint8Array) => {
 };
 
 const webpToPngRust = async (webpData: Uint8Array) => {
-  console.log("Converting webp through Rust");
   const convertedImg = await invoke("convert_webp_to_png", {
     webpData: Array.from(webpData),
   });
@@ -62,54 +60,60 @@ const webpToPngRust = async (webpData: Uint8Array) => {
     throw new Error(convertedImg);
   }
 
-  console.log("Converted data from Rust", convertedImg);
+  const convertedData = new Uint8Array(convertedImg as Uint8Array);
+
+  console.log(
+    `Converted WebP image to PNG with the size of ${convertedData.length} bytes using Rust`
+  );
   // trust issues
-  return new Uint8Array(convertedImg as Uint8Array);
+  return convertedData;
+};
+
+const embedImgToPdf = async (imgPath: string, pdf: PDFDocument) => {
+  const imgBin = await readFile(imgPath);
+  const imgExt = getFileExt(imgPath);
+
+  console.log(`Processing page ${imgPath}`);
+
+  let imageToAdd: PDFImage;
+
+  switch (imgExt) {
+    case "png":
+      imageToAdd = await pdf.embedPng(imgBin);
+      break;
+    case "jpg":
+    case "jpeg":
+      imageToAdd = await pdf.embedJpg(imgBin);
+      break;
+    case "webp":
+      const pngFromWebp = await webpToPngRust(imgBin);
+      imageToAdd = await pdf.embedPng(pngFromWebp);
+      break;
+    default:
+      throw new Error(`File extension ${imgExt} is not supported`);
+  }
+  // note: this part will progressively get bigger as the number of processed images increase
+  // we need to find a way to process images into chunks, save it before processing the next chunk
+  const page = pdf.addPage([imageToAdd.width, imageToAdd.height]);
+  page.drawImage(imageToAdd, {
+    x: 0,
+    y: 0,
+    width: imageToAdd.width,
+    height: imageToAdd.height,
+  });
+
+  return pdf;
 };
 
 const createPdfFromImages = async (imgPagePaths: string[]) => {
   // todo: this function does not scale well. Maybe add pages in chunks?
   // for example, if the pdf doesn't already exist, create a new one and write first chunk, next loop will load the written file and add the next chunk
-  const pdfDoc = await PDFDocument.create();
+  let pdfDoc = await PDFDocument.create();
 
   console.log("Creating a new PDF document");
 
   for (const imgPath of imgPagePaths) {
-    // todo: optimize this operation
-    const imgBin = await readFile(imgPath);
-    const imgExt = getFileExt(imgPath);
-
-    console.log(`Processing page ${imgPath}`);
-
-    let imageToAdd: PDFImage;
-
-    switch (imgExt) {
-      case "png":
-        imageToAdd = await pdfDoc.embedPng(imgBin);
-        break;
-      case "jpg":
-      case "jpeg":
-        imageToAdd = await pdfDoc.embedJpg(imgBin);
-        break;
-      case "webp":
-        const pngFromWebp = await webpToPngRust(imgBin);
-        console.log(
-          `Embedding the converted image with the size of ${pngFromWebp.length} to the document`
-        );
-        imageToAdd = await pdfDoc.embedPng(pngFromWebp);
-        break;
-      default:
-        throw new Error(`File extension ${imgExt} is not supported`);
-    }
-    // note: this part will progressively get bigger as the number of processed images increase
-    // we need to find a way to process images into chunks, save it before processing the next chunk
-    const page = pdfDoc.addPage([imageToAdd.width, imageToAdd.height]);
-    page.drawImage(imageToAdd, {
-      x: 0,
-      y: 0,
-      width: imageToAdd.width,
-      height: imageToAdd.height,
-    });
+    pdfDoc = await embedImgToPdf(imgPath, pdfDoc);
   }
   return await pdfDoc.save({ useObjectStreams: true });
 };
@@ -137,6 +141,10 @@ export const createPdfFromCollection = async (
 
     const docName = doc.collectionName + ".pdf";
     const savePath = await join(outputPath, docName);
+
+    console.log(
+      `Finished binding ${docName}. The document size is ${pdfBin.length} bytes`
+    );
 
     //await writeBinaryFile(savePath, pdfBin); // note: the app runs out of memory here if the file size is large
 
