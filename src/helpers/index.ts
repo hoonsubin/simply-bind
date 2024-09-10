@@ -28,7 +28,7 @@ export const readZipFile = async (zipPath: string) => {
 
 export const webpToPng = async (webpData: Uint8Array) => {
   // create an image from the WebP data
-  const img = await createImageBitmap(new Blob([webpData])); // todo: can it be optimized?
+  const img = await createImageBitmap(new Blob([webpData]));
 
   // create a canvas element to draw the image
   const canvas = document.createElement("canvas");
@@ -45,7 +45,6 @@ export const webpToPng = async (webpData: Uint8Array) => {
   // convert the canvas content to a PNG data URL
   const pngUri = canvas.toDataURL("image/png");
 
-  // todo: this might be too much overhead. Need to find a better way in the future
   const pngResponse = await fetch(pngUri);
   const pngBlob = await pngResponse.blob();
   const pngArrayBuffer = await pngBlob.arrayBuffer();
