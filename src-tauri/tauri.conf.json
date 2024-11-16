@@ -15,7 +15,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["sidecar/python-script"]
+    "externalBin": ["bin/python-script"]
   },
   "productName": "img-to-pdf-converter",
   "version": "0.1.0",

@@ -9,7 +9,7 @@ import { Command } from "@tauri-apps/plugin-shell";
 
 export const convertToPdfSidecar = async (fileName: string, inputPath: string, outputPath: string) => {
   try {
-    const command = Command.sidecar("sidecar/python-script", [
+    const command = Command.sidecar("bin/python-script", [
       "--name",
       fileName,
       "--input",

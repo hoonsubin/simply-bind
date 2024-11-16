@@ -40,7 +40,7 @@
               "validator": ".+"
             }
           ],
-          "name": "sidecar/python-script",
+          "name": "bin/python-script",
           "sidecar": true
         }
       ]
