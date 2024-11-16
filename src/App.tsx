@@ -2,7 +2,7 @@ import FileUpload from "./components/FileUpload";
 import CollectionList from "./components/CollectionList";
 import { useState, useCallback } from "react";
 import { DocumentItem } from "./types";
-import { CButton } from "@coreui/react";
+import { CButton, CCol, CListGroup, CListGroupItem, CRow } from "@coreui/react";
 import { downloadDir } from "@tauri-apps/api/path";
 import { open } from "@tauri-apps/plugin-dialog";
 import * as helpers from "./helpers";
@@ -58,13 +58,41 @@ function App() {
 
   return (
     <div className="container">
-      <FileUpload onFileSelect={(i) => setFiles(i)} />
-      <CollectionList collections={files} />
-      {files.length > 0 && (
-        <CButton color="primary" disabled={isLoading} onClick={onClickExport}>
-          Convert
-        </CButton>
-      )}
+      <CRow>
+        <CCol>
+          <FileUpload onFileSelect={(i) => setFiles(i)} />
+          {/* <CollectionList collections={files} /> */}
+        </CCol>
+        <CCol>
+          {files.length > 0 ? (
+            <>
+              <CListGroup>
+                {files.map((i) => {
+                  return (
+                    <CListGroupItem>
+                      <div>
+                        <h5>{i.collectionName}</h5>
+                        <small>{i.basePath}</small>
+                      </div>
+                    </CListGroupItem>
+                  );
+                })}
+              </CListGroup>
+              <CButton
+                color="primary"
+                disabled={isLoading}
+                onClick={onClickExport}
+              >
+                Convert
+              </CButton>
+            </>
+          ) : (
+            <>
+              <h1>No Items</h1>
+            </>
+          )}
+        </CCol>
+      </CRow>
     </div>
   );
 }
