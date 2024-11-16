@@ -22,6 +22,29 @@
         "**"
       ]
     },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "args": [
+            "--name",
+            {
+              "validator": ".+"
+            },
+            "--input",
+            {
+              "validator": ".+"
+            },
+            "--output",
+            {
+              "validator": ".+"
+            }
+          ],
+          "name": "sidecar/python-script",
+          "sidecar": true
+        }
+      ]
+    },
     "shell:allow-open",
     "dialog:allow-open",
     "dialog:allow-save",
