@@ -3,202 +3,117 @@ import { DocumentItem, FileItem } from "./types"; // Import custom types for doc
 import {
   CButton,
   CCard,
-  CCardBody,
   CCol,
+  CContainer,
+  CFormInput,
+  CFormLabel,
+  CInputGroup,
+  CInputGroupText,
   CListGroup,
   CListGroupItem,
+  CProgress,
   CRow,
+  CToast,
+  CToastBody,
+  CToastHeader,
 } from "@coreui/react"; // Import CoreUI components
 import { downloadDir } from "@tauri-apps/api/path"; // Function to get the default download directory
 import { open } from "@tauri-apps/plugin-dialog"; // Dialog plugin for opening file/folder selectors
 import * as helpers from "./helpers"; // Custom helper functions
-import { basename, join } from "@tauri-apps/api/path"; // Path manipulation functions
 import _ from "lodash"; // Utility library
-import { readDir } from "@tauri-apps/plugin-fs"; // Function to read directory contents
-import { appConfig } from "./config"; // Application configuration
 import "@coreui/coreui/dist/css/coreui.min.css"; // Import CoreUI CSS
+import CollectionItem from "./components/CollectionItem";
+
+type SysMsgToastProps = {
+  message: string;
+};
+const SysMsgToast: React.FC<SysMsgToastProps> = (props) => {
+  return (
+    <>
+      <CToast>
+        <CToastHeader closeButton>
+          <svg
+            className="rounded me-2"
+            width="20"
+            height="20"
+            xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="xMidYMid slice"
+            focusable="false"
+            role="img"
+          >
+            <rect width="100%" height="100%" fill="#007aff"></rect>
+          </svg>
+          <div className="fw-bold me-auto">CoreUI for React.js</div>
+          <small>7 min ago</small>
+        </CToastHeader>
+        <CToastBody>{props.message}</CToastBody>
+      </CToast>
+    </>
+  );
+};
 
 function App() {
   const [files, setFiles] = useState<DocumentItem[]>([]); // State to hold the list of processed files
   const [isLoading, setIsLoading] = useState(false); // State to indicate if the app is currently loading
+  const [outputPath, setOutputPath] = useState("");
 
-  /**
-   * Processes a directory by reading its contents and categorizing them into image files, zip files, and folders.
-   * @param path - The path of the directory to process.
-   * @returns An array of processed document items.
-   */
-  const processDir = async (path: string) => {
-    let processedFiles: DocumentItem[] = [];
-
-    const files = await readDir(path); // Read the contents of the directory
-
-    if (!files) {
-      return [];
-    }
-
-    // Filter image files based on supported formats
-    const imageFiles = files.filter((file) => {
-      return (
-        file.isFile &&
-        helpers.checkFileExtMatch(file.name, appConfig.supportedImgFormat)
-      );
-    });
-
-    // Filter zip files
-    const zipFiles = files.filter((file) => {
-      return file.isFile && helpers.checkFileExtMatch(file.name, ["zip"]);
-    });
-
-    // Filter folders (directories)
-    const folders = files.filter((file) => {
-      return !!file.isDirectory;
-    });
-
-    if (!imageFiles.length && !zipFiles.length && !folders.length) {
-      throw new Error(`${path} is empty`);
-    }
-
-    console.log("Found the following files in " + path, {
-      imageFiles,
-      zipFiles,
-      folders,
-    });
-
-    // Handling image collections in the base directory
-    if (imageFiles.length > 0) {
-      const collectionName = await basename(path); // Get the name of the directory
-
-      const collectionContent = await Promise.all(
-        _.map(imageFiles, async (i) => {
-          return {
-            name: i.name,
-            path: await join(path, i.name),
-          } as FileItem;
-        })
-      );
-
-      const rootCollection: DocumentItem = {
-        collectionName: collectionName,
-        basePath: path,
-        content: _.sortBy(collectionContent, ["name"]), // Sort files by name
-        isArchive: false,
-      };
-
-      processedFiles.push(rootCollection);
-    }
-
-    // Handling folders of image collections
-    if (folders.length > 0) {
-      const subDocs = _.map(folders, async (folder) => {
-        return await processDir(await join(path, folder.name)); // Recursively process each folder
+  const onClickSelectSavePath = () => {
+    setIsLoading(true);
+    const _saveFiles = async () => {
+      const selected = await open({
+        multiple: false,
+        directory: true,
+        recursive: false,
       });
 
-      const processedSubDirs = (await Promise.all(subDocs)).flat();
-      processedFiles.push(...processedSubDirs);
-    }
-
-    // Handling zip files of image collections
-    if (zipFiles.length > 0) {
-      const zipCollections = await Promise.all(
-        _.map(zipFiles, async (i) => {
-          return {
-            collectionName: i.name,
-            basePath: await join(path, i.name),
-            content: [],
-            isArchive: true,
-          } as DocumentItem;
-        })
-      );
-
-      processedFiles.push(...zipCollections);
-    }
-
-    console.log("Processed collections ", processedFiles);
-
-    return processedFiles;
-  };
-
-  /**
-   * Handles the drop event when files or folders are dragged and dropped onto the drop zone.
-   * @param event - The drag event.
-   */
-  const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const items = event.dataTransfer.items;
-
-    if (items) {
-      const filePromises: Promise<FileItem[]>[] = [];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i].webkitGetAsEntry();
-        if (item) {
-          filePromises.push(processEntry(item as FileSystemDirectoryEntry)); // Process each entry
-        }
+      if (!selected) {
+        throw new Error("User did not select a folder");
       }
 
-      // Promise.all(filePromises).then((fileItems) => {
-      //   setFiles(fileItems.flat());
-      // });
-    }
-  }, []);
+      return selected;
+    };
 
-  /**
-   * Recursively processes a directory or file entry.
-   * @param entry - The file system entry to process (can be a file or a directory).
-   * @returns An array of processed file items.
-   */
-  const processEntry = async (
-    entry: FileSystemDirectoryEntry
-  ): Promise<FileItem[]> => {
-    if (entry.isFile) {
-      return [{ path: entry.fullPath, name: entry.name || "" }]; // Return the file item for a file entry
-    } else if (entry.isDirectory) {
-      const dirReader = entry.createReader();
-      const entries = await new Promise<any[]>((resolve) => {
-        dirReader.readEntries(resolve); // Read the contents of the directory
+    _saveFiles()
+      .then((i) => {
+        setOutputPath(i);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-
-      const promises = entries.map((e) => processEntry(e)); // Process each entry in the directory
-      const results = await Promise.all(promises);
-      return results.flat();
-    }
-    return [];
   };
-
-  /**
-   * Handles the drag over event to allow dropping files or folders.
-   * @param event - The drag event.
-   */
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-  };
-
   /**
    * Opens a folder selection dialog and processes the selected directories.
    */
-  const onClickSelectFiles = async () => {
+  const onClickAddFiles = () => {
     setIsLoading(true); // Show loading effect
 
-    const selected = await open({
-      multiple: true,
-      directory: true,
-      recursive: false,
-    });
+    const _addFiles = async () => {
+      const selected = await open({
+        multiple: true,
+        directory: true,
+        recursive: false,
+      });
 
-    if (!selected) {
-      console.error("User did not select a folder");
-      setIsLoading(false);
-      return;
-    }
+      if (!selected) {
+        throw new Error("User did not select a folder");
+      }
 
-    if (Array.isArray(selected)) {
       const filePromises = selected.map(async (path) => {
-        return await processDir(path); // Process each selected directory
+        return await helpers.processPath(path); // Process each selected directory
       });
 
       const fileItems = (await Promise.all(filePromises)).flat();
-      setFiles(fileItems); // Update the files state with processed items
-      setIsLoading(false);
-    }
+      return fileItems;
+    };
+
+    _addFiles()
+      .then((i) => {
+        // todo: add new files to the list instead of completely replacing it
+        setFiles(i); // Update the files state with processed items
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   };
 
   /**
@@ -207,41 +122,30 @@ function App() {
   const onClickConvert = useCallback(() => {
     setIsLoading(true);
 
-    const exportPdf = async () => {
-      const saveLoc = await open({
-        multiple: false,
-        directory: true,
-        recursive: false,
-        defaultPath: await downloadDir(),
-      });
-
-      if (!saveLoc) {
-        console.error("Could not get the export path");
-        setIsLoading(false);
-        return;
-      }
-      console.log("Got the export path: ", saveLoc);
-
+    const _exportPdf = async () => {
       if (files.length > 0) {
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
-          await helpers.createPdfFromCollection(file, saveLoc.toString()); // Convert each collection to a PDF
+          await helpers.convertToPdfSidecar(
+            file.collectionName,
+            file.basePath,
+            outputPath
+          ); // Convert each collection to a PDF
         }
       }
     };
 
-    exportPdf()
+    _exportPdf()
       .catch((err) => {
         console.error(err);
       })
       .finally(() => {
         setIsLoading(false); // Hide loading effect after processing is complete
       });
-  }, [files]);
+  }, [files, outputPath]);
 
   return (
-    <div
-      className="container"
+    <CContainer
       style={{
         paddingTop: "20px",
         paddingBottom: "20px",
@@ -256,36 +160,56 @@ function App() {
               width: "100%",
             }}
           >
-            <CCardBody>
-              {/* Drag and drop area */}
-              <div
-                onDrop={handleDrop}
-                onDragOver={handleDragOver}
-                style={{
-                  border: "2px dashed #ccc",
-                  padding: "20px",
-                  marginBottom: "20px",
-                }}
-              >
-                Drag and drop
-              </div>
-              {/* Button to select files or folders */}
-              <CButton
-                color="primary"
-                onClick={onClickSelectFiles}
-                disabled={isLoading}
-              >
-                {isLoading ? "Loading files..." : "Select Files or Folders"}
-              </CButton>
-              {/* Button to convert selected collections to PDFs */}
-              <CButton
-                color="primary"
-                disabled={files.length < 1 || isLoading}
-                onClick={onClickConvert}
-              >
-                Convert
-              </CButton>
-            </CCardBody>
+            <CListGroup>
+              <CListGroupItem className="d-grid gap-2">
+                {/* Button to select files or folders */}
+                <CButton
+                  color="primary"
+                  onClick={onClickAddFiles}
+                  disabled={isLoading}
+                  size="lg"
+                >
+                  {isLoading ? "Loading files..." : "Add Collections"}
+                </CButton>
+              </CListGroupItem>
+              <CListGroupItem className="d-grid gap-2">
+                {/* <div className="mb-3">
+                  <CFormInput
+                    type="file"
+                    id="formFile"
+                    label="Set output folder"
+                  />
+                </div> */}
+                <CInputGroup className="has-validation">
+                  <CButton
+                    color="primary"
+                    disabled={isLoading}
+                    size="lg"
+                    onClick={onClickSelectSavePath}
+                  >
+                    Where to save
+                  </CButton>
+                  {outputPath && (
+                    <CInputGroupText>{outputPath}</CInputGroupText>
+                  )}
+                </CInputGroup>
+              </CListGroupItem>
+              <CListGroupItem className="d-grid gap-2">
+                {/* Button to convert selected collections to PDFs */}
+                <CButton
+                  color="primary"
+                  disabled={files.length < 1 || isLoading || !outputPath}
+                  onClick={onClickConvert}
+                  size="lg"
+                >
+                  Convert
+                </CButton>
+              </CListGroupItem>
+              <CListGroupItem>
+                <h1>Progress</h1>
+                <CProgress value={50} />
+              </CListGroupItem>
+            </CListGroup>
           </CCard>
         </CCol>
         <CCol>
@@ -302,16 +226,12 @@ function App() {
                 <CListGroup>
                   {files.map((i, index) => {
                     return (
-                      <CListGroupItem
-                        as="button"
+                      <CollectionItem
+                        processStatus="Loaded"
                         key={index}
-                        color={!i.isArchive ? "primary" : "secondary"}
-                      >
-                        <div>
-                          <h5>{i.collectionName}</h5>
-                          <small>{i.basePath}</small>
-                        </div>
-                      </CListGroupItem>
+                        collection={i}
+                        onClickRemoveItem={(i) => console.log(i)}
+                      />
                     );
                   })}
                 </CListGroup>
@@ -324,7 +244,7 @@ function App() {
           </div>
         </CCol>
       </CRow>
-    </div>
+    </CContainer>
   );
 }
 
