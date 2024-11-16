@@ -45,14 +45,15 @@ function App() {
           await helpers.createPdfFromCollection(file, saveLoc.toString());
         }
       }
-
-      setIsLoading(false);
     };
 
-    exportPdf().catch((err) => {
-      console.error(err);
-      setIsLoading(false);
-    });
+    exportPdf()
+      .catch((err) => {
+        console.error(err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [files]);
 
   return (
@@ -61,7 +62,7 @@ function App() {
       <CollectionList collections={files} />
       {files.length > 0 && (
         <CButton color="primary" disabled={isLoading} onClick={onClickExport}>
-          Export Document
+          Convert
         </CButton>
       )}
     </div>
