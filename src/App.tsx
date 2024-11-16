@@ -1,70 +1,65 @@
-import { useState, useCallback } from "react";
-import { DocumentItem, FileItem } from "./types"; // Import custom types for document and file items
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { DocumentItem, ProcessStatus } from "./types"; // Import custom types for document and file items
 import {
   CButton,
   CCard,
   CCol,
   CContainer,
-  CFormInput,
-  CFormLabel,
   CInputGroup,
   CInputGroupText,
   CListGroup,
   CListGroupItem,
   CProgress,
   CRow,
-  CToast,
-  CToastBody,
-  CToastHeader,
 } from "@coreui/react"; // Import CoreUI components
-import { downloadDir } from "@tauri-apps/api/path"; // Function to get the default download directory
 import { open } from "@tauri-apps/plugin-dialog"; // Dialog plugin for opening file/folder selectors
 import * as helpers from "./helpers"; // Custom helper functions
 import _ from "lodash"; // Utility library
 import "@coreui/coreui/dist/css/coreui.min.css"; // Import CoreUI CSS
 import CollectionItem from "./components/CollectionItem";
 
-type SysMsgToastProps = {
-  message: string;
-};
-const SysMsgToast: React.FC<SysMsgToastProps> = (props) => {
-  return (
-    <>
-      <CToast>
-        <CToastHeader closeButton>
-          <svg
-            className="rounded me-2"
-            width="20"
-            height="20"
-            xmlns="http://www.w3.org/2000/svg"
-            preserveAspectRatio="xMidYMid slice"
-            focusable="false"
-            role="img"
-          >
-            <rect width="100%" height="100%" fill="#007aff"></rect>
-          </svg>
-          <div className="fw-bold me-auto">CoreUI for React.js</div>
-          <small>7 min ago</small>
-        </CToastHeader>
-        <CToastBody>{props.message}</CToastBody>
-      </CToast>
-    </>
-  );
-};
+interface ProcessableDoc extends DocumentItem {
+  status: ProcessStatus;
+}
 
 function App() {
   const [files, setFiles] = useState<DocumentItem[]>([]); // State to hold the list of processed files
   const [isLoading, setIsLoading] = useState(false); // State to indicate if the app is currently loading
   const [outputPath, setOutputPath] = useState("");
+  const [processingFileNo, setProcessingFileNo] = useState<number | null>(null);
+  const [processedFiles, setProcessedFiles] = useState<string[]>([]);
+  const [failedFiles, setFailedFiles] = useState<string[]>([]);
+
+  const convertProgress = useMemo(() => {
+    const finishedTasks = processingFileNo || 0;
+    const totalTasks = files.length;
+
+    return finishedTasks > 0 ? (finishedTasks / totalTasks) * 100 : 0;
+  }, [processingFileNo, files]);
+
+  const processableDocs = useMemo(() => {
+    return _.map(files, (file, index) => {
+      let status: ProcessStatus = "Loaded";
+
+      if (processingFileNo === index) {
+        status = "Processing";
+      } else if (_.includes(processedFiles, file.basePath)) {
+        status = "Finished";
+      } else if (_.includes(failedFiles, file.basePath)) {
+        status = "Failed";
+      }
+
+      return {
+        ...file,
+        status,
+      } as ProcessableDoc;
+    });
+  }, [files, processingFileNo, failedFiles, processedFiles]);
 
   const onClickSelectSavePath = () => {
     setIsLoading(true);
     const _saveFiles = async () => {
-      const selected = await open({
-        multiple: false,
-        directory: true,
-        recursive: false,
-      });
+      const selected = await helpers.openSelectDir();
 
       if (!selected) {
         throw new Error("User did not select a folder");
@@ -108,8 +103,12 @@ function App() {
 
     _addFiles()
       .then((i) => {
-        // todo: add new files to the list instead of completely replacing it
-        setFiles(i); // Update the files state with processed items
+        // todo: append new files to the list instead of completely replacing it
+        const newFiles = i.filter((j) => {
+          return !helpers.listContainsDocument(files, j);
+        });
+        
+        setFiles(_.concat(files, newFiles)); // Update the files state with processed items
       })
       .finally(() => {
         setIsLoading(false);
@@ -119,18 +118,39 @@ function App() {
   /**
    * Converts the selected document collections into PDFs.
    */
-  const onClickConvert = useCallback(() => {
+  const onClickConvertAll = useCallback(() => {
     setIsLoading(true);
 
     const _exportPdf = async () => {
       if (files.length > 0) {
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
-          await helpers.convertToPdfSidecar(
-            file.collectionName,
-            file.basePath,
-            outputPath
-          ); // Convert each collection to a PDF
+
+          // Skip already converted files
+          if (processableDocs[i].status === "Finished") {
+            continue;
+          }
+
+          setProcessingFileNo(i);
+
+          try {
+            await helpers.convertToPdfSidecar(
+              file.collectionName,
+              file.basePath,
+              outputPath
+            ); // Convert each collection to a PDF
+          } catch (e) {
+            console.error(e);
+            setFailedFiles(_.concat(failedFiles, [file.basePath]));
+            continue;
+          }
+          setProcessedFiles(_.concat(processedFiles, file.basePath));
+
+          console.log({
+            processedFiles,
+            failedFiles,
+            processableDocs,
+          });
         }
       }
     };
@@ -141,8 +161,9 @@ function App() {
       })
       .finally(() => {
         setIsLoading(false); // Hide loading effect after processing is complete
+        setProcessingFileNo(null);
       });
-  }, [files, outputPath]);
+  }, [files, failedFiles, processedFiles, processableDocs, outputPath]);
 
   return (
     <CContainer
@@ -169,17 +190,10 @@ function App() {
                   disabled={isLoading}
                   size="lg"
                 >
-                  {isLoading ? "Loading files..." : "Add Collections"}
+                  Add Collections
                 </CButton>
               </CListGroupItem>
               <CListGroupItem className="d-grid gap-2">
-                {/* <div className="mb-3">
-                  <CFormInput
-                    type="file"
-                    id="formFile"
-                    label="Set output folder"
-                  />
-                </div> */}
                 <CInputGroup className="has-validation">
                   <CButton
                     color="primary"
@@ -199,7 +213,7 @@ function App() {
                 <CButton
                   color="primary"
                   disabled={files.length < 1 || isLoading || !outputPath}
-                  onClick={onClickConvert}
+                  onClick={onClickConvertAll}
                   size="lg"
                 >
                   Convert
@@ -207,7 +221,7 @@ function App() {
               </CListGroupItem>
               <CListGroupItem>
                 <h1>Progress</h1>
-                <CProgress value={50} />
+                <CProgress value={convertProgress} />
               </CListGroupItem>
             </CListGroup>
           </CCard>
@@ -224,22 +238,31 @@ function App() {
             {files.length > 0 ? (
               <>
                 <CListGroup>
-                  {files.map((i, index) => {
+                  {processableDocs.map((i, index) => {
                     return (
                       <CollectionItem
-                        processStatus="Loaded"
                         key={index}
                         collection={i}
-                        onClickRemoveItem={(i) => console.log(i)}
+                        processStatus={i.status}
                       />
                     );
                   })}
                 </CListGroup>
               </>
             ) : (
-              <>
-                <h1>No Items</h1>
-              </>
+              <CContainer
+                style={{
+                  height: "100%",
+                }}
+              >
+                <CCard
+                  style={{
+                    height: "100%",
+                  }}
+                >
+                  <h1>No Items</h1>
+                </CCard>
+              </CContainer>
             )}
           </div>
         </CCol>

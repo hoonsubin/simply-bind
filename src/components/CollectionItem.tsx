@@ -1,9 +1,6 @@
-import { DocumentItem } from "../types";
+import { DocumentItem, ProcessStatus } from "../types";
 import {
   CBadge,
-  CButton,
-  CCard,
-  CCardBody,
   CCollapse,
   CContainer,
   CListGroup,
@@ -11,28 +8,26 @@ import {
   CRow,
   CSpinner,
 } from "@coreui/react";
-import CIcon from "@coreui/icons-react";
-import { cilTrash } from "@coreui/icons";
 import { useState, useMemo } from "react";
-
-type ProcessStatus = "Loaded" | "Processing" | "Finished";
 
 type CollectionItemProps = {
   collection: DocumentItem;
   processStatus: ProcessStatus;
-  isProcessing?: boolean;
-  onClickRemoveItem?: (item: DocumentItem) => void;
 };
 
 const CollectionItem: React.FC<CollectionItemProps> = (props) => {
   const [isItemOpen, setIsItemOpen] = useState(false);
+
+  const isProcessing = useMemo(() => {
+    return props.processStatus === "Processing";
+  }, [props.processStatus])
 
   const statusColor = useMemo(() => {
     switch (props.processStatus) {
       case "Finished":
         return "success";
       case "Loaded":
-        return "primary";
+        return "info";
       case "Processing":
         return "warning";
     }
@@ -49,7 +44,7 @@ const CollectionItem: React.FC<CollectionItemProps> = (props) => {
     >
       <CContainer>
         <CRow>
-          {props.isProcessing && <CSpinner variant="grow" className="m-1" />}
+          {isProcessing && <CSpinner variant="grow" className="m-1" />}
           <h4>{props.collection.collectionName}</h4>
         </CRow>
         <CRow>
@@ -64,16 +59,6 @@ const CollectionItem: React.FC<CollectionItemProps> = (props) => {
             )}
 
             <small>{props.collection.content.length} Pages</small>
-            {/* <CButton
-              color="danger"
-              shape="rounded-pill"
-              onClick={() => {
-                props.onClickRemoveItem &&
-                  props.onClickRemoveItem(props.collection);
-              }}
-            >
-              <CIcon icon={cilTrash} size="xl" />
-            </CButton> */}
           </div>
         </CRow>
         {props.collection.content.length > 0 && (
