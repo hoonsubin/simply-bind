@@ -129,6 +129,7 @@ const createPdfFromImages = async (imgPagePaths: string[]) => {
   return await pdfDoc.save({ useObjectStreams: true });
 };
 
+// todo: refactor this to use the python script sidecar
 export const createPdfFromCollection = async (
   doc: DocumentItem,
   outputPath: string

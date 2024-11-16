@@ -180,8 +180,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
   };
 
   return (
-    <div>
-      <CCard>
+    <>
+      <CCard style={{
+        height: "100%",
+        width: "100%"
+      }}>
         <CCardBody>
           <div
             onDrop={handleDrop}
@@ -203,7 +206,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
           </CButton>
         </CCardBody>
       </CCard>
-    </div>
+    </>
   );
 };
 

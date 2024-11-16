@@ -57,40 +57,63 @@ function App() {
   }, [files]);
 
   return (
-    <div className="container">
+    <div
+      className="container"
+      style={{
+        paddingTop: "20px",
+        paddingBottom: "20px",
+        position: "relative"
+      }}
+    >
       <CRow>
         <CCol>
-          <FileUpload onFileSelect={(i) => setFiles(i)} />
-          {/* <CollectionList collections={files} /> */}
+          <div style={{
+            height: "100%"
+          }}>
+            <FileUpload onFileSelect={(i) => setFiles(i)} />
+            {/* <CollectionList collections={files} /> */}
+            <CButton
+              color="primary"
+              disabled={files.length < 1 || isLoading}
+              onClick={onClickExport}
+            >
+              Convert
+            </CButton>
+          </div>
         </CCol>
         <CCol>
-          {files.length > 0 ? (
-            <>
-              <CListGroup>
-                {files.map((i) => {
-                  return (
-                    <CListGroupItem>
-                      <div>
-                        <h5>{i.collectionName}</h5>
-                        <small>{i.basePath}</small>
-                      </div>
-                    </CListGroupItem>
-                  );
-                })}
-              </CListGroup>
-              <CButton
-                color="primary"
-                disabled={isLoading}
-                onClick={onClickExport}
-              >
-                Convert
-              </CButton>
-            </>
-          ) : (
-            <>
-              <h1>No Items</h1>
-            </>
-          )}
+          <div
+            style={{
+              height: "90vh",
+              overflowX: "hidden",
+              overflowY: "auto",
+            }}
+          >
+            {files.length > 0 ? (
+              <>
+                <CListGroup>
+                  {files.map((i, index) => {
+                    return (
+                      <CListGroupItem
+                        as="button"
+                        key={index}
+                        color={!i.isArchive ? "primary" : "secondary"}
+                      >
+                        <div>
+                          <h5>{i.collectionName}</h5>
+                          <small>{i.basePath}</small>
+                        </div>
+                      </CListGroupItem>
+                    );
+                  })}
+                </CListGroup>
+              </>
+            ) : (
+              <>
+                <h1>No Items</h1>
+              </>
+            )}
+          </div>
         </CCol>
       </CRow>
     </div>
