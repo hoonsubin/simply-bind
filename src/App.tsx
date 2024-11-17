@@ -18,18 +18,20 @@ import _ from "lodash"; // Utility library
 import "@coreui/coreui/dist/css/coreui.min.css"; // Import CoreUI CSS
 import CollectionItem from "./components/CollectionItem";
 
+// Define a new interface that extends DocumentItem with an additional status field
 interface ProcessableDoc extends DocumentItem {
   status: ProcessStatus;
 }
 
 function App() {
-  const [files, setFiles] = useState<DocumentItem[]>([]); // State to hold the list of processed files
+  const [files, setFiles] = useState<DocumentItem[]>([]); // State to hold the list of files
   const [isLoading, setIsLoading] = useState(false); // State to indicate if the app is currently loading
-  const [outputPath, setOutputPath] = useState("");
-  const [processingFileNo, setProcessingFileNo] = useState<number | null>(null);
-  const [processedFiles, setProcessedFiles] = useState<string[]>([]);
-  const [failedFiles, setFailedFiles] = useState<string[]>([]);
+  const [outputPath, setOutputPath] = useState(""); // State to store the selected output path for saving files
+  const [processingFileNo, setProcessingFileNo] = useState<number | null>(null); // Index of the file being processed
+  const [processedFiles, setProcessedFiles] = useState<string[]>([]); // List of paths to files that have been successfully processed
+  const [failedFiles, setFailedFiles] = useState<string[]>([]); // List of paths to files that failed processing
 
+  // Calculate the conversion progress as a percentage based on the number of files processed
   const convertProgress = useMemo(() => {
     const finishedTasks = processingFileNo || 0;
     const totalTasks = files.length;
@@ -37,6 +39,7 @@ function App() {
     return finishedTasks > 0 ? (finishedTasks / totalTasks) * 100 : 0;
   }, [processingFileNo, files]);
 
+  // Map the files array to include a status field indicating whether each file is loaded, processing, finished, or failed
   const processableDocs = useMemo(() => {
     return _.map(files, (file, index) => {
       let status: ProcessStatus = "Loaded";
@@ -56,13 +59,15 @@ function App() {
     });
   }, [files, processingFileNo, failedFiles, processedFiles]);
 
+  // Opens a dialog for selecting the save path and updates the outputPath state
   const onClickSelectSavePath = () => {
-    setIsLoading(true);
+    setIsLoading(true); // Show loading effect
+
     const _saveFiles = async () => {
-      const selected = await helpers.openSelectDir();
+      const selected = await helpers.openSelectDir(); // Use helper function to open directory selection dialog
 
       if (!selected) {
-        throw new Error("User did not select a folder");
+        throw new Error("User did not select a folder"); // Throw an error if no folder is selected
       }
 
       return selected;
@@ -70,12 +75,13 @@ function App() {
 
     _saveFiles()
       .then((i) => {
-        setOutputPath(i);
+        setOutputPath(i); // Update outputPath state with the selected directory path
       })
       .finally(() => {
-        setIsLoading(false);
+        setIsLoading(false); // Hide loading effect after dialog closes
       });
   };
+
   /**
    * Opens a folder selection dialog and processes the selected directories.
    */
@@ -90,11 +96,11 @@ function App() {
       });
 
       if (!selected) {
-        throw new Error("User did not select a folder");
+        throw new Error("User did not select a folder"); // Throw an error if no folder is selected
       }
 
       const filePromises = selected.map(async (path) => {
-        return await helpers.processPath(path); // Process each selected directory
+        return await helpers.processPath(path); // Process each selected directory and get file items
       });
 
       const fileItems = (await Promise.all(filePromises)).flat();
@@ -103,15 +109,15 @@ function App() {
 
     _addFiles()
       .then((i) => {
-        // todo: append new files to the list instead of completely replacing it
+        // Filter out duplicate files before adding to the list
         const newFiles = i.filter((j) => {
           return !helpers.listContainsDocument(files, j);
         });
         
-        setFiles(oldFiles => _.concat(oldFiles, newFiles)); // Update the files state with processed items
+        setFiles(oldFiles => _.concat(oldFiles, newFiles)); // Append new files to the existing files state
       })
       .finally(() => {
-        setIsLoading(false);
+        setIsLoading(false); // Hide loading effect after file processing is complete
       });
   };
 
@@ -131,20 +137,20 @@ function App() {
             continue;
           }
 
-          setProcessingFileNo(i);
+          setProcessingFileNo(i); // Update the index of the current file being processed
 
           try {
             await helpers.convertToPdfSidecar(
               file.collectionName,
               file.basePath,
               outputPath
-            ); // Convert each collection to a PDF
+            ); // Convert each collection to a PDF using helper function
           } catch (e) {
             console.error(e);
-            setFailedFiles(old => _.concat(old, [file.basePath]));
+            setFailedFiles(old => _.concat(old, [file.basePath])); // Add the failed file path to the failed files list
             continue;
           }
-          setProcessedFiles(old => _.concat(old, file.basePath));
+          setProcessedFiles(old => _.concat(old, file.basePath)); // Add the successfully processed file path to the processed files list
 
           console.log({
             processedFiles,
@@ -161,7 +167,7 @@ function App() {
       })
       .finally(() => {
         setIsLoading(false); // Hide loading effect after processing is complete
-        setProcessingFileNo(null);
+        setProcessingFileNo(null); // Reset the index of the current file being processed
       });
   }, [files, failedFiles, processedFiles, processableDocs, outputPath]);
 
