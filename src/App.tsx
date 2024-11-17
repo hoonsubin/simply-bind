@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { DocumentItem, ProcessStatus } from "./types"; // Import custom types for document and file items
 import {
   CButton,
