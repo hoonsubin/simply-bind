@@ -3,6 +3,8 @@ export interface FileItem {
   path: string;
 }
 
+export type ProcessStatus = "Loaded" | "Processing" | "Finished" | "Failed";
+
 export interface DocumentItem {
   collectionName: string;
   basePath: string;
