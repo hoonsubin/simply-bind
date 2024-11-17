@@ -15,7 +15,14 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "externalBin": ["bin/python-script"]
+    "externalBin": [
+      "bin/python-script"
+    ],
+    "windows": {
+      "wix": {
+        "language": "en-US"
+      }
+    }
   },
   "productName": "img-to-pdf-converter",
   "version": "0.1.0",
