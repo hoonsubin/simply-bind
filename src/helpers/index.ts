@@ -79,8 +79,8 @@ export const checkFileExtMatch = (filePath: string, ext: string[]) => {
 export const processPath = async (path: string) => {
   let processedFiles: DocumentItem[] = [];
 
-  // Read the contents of the directory
-  const files = await readDir(path);
+  // todo: ignore hidden files
+  const files = await readDir(path); // Read the contents of the directory
 
   if (!files) {
     return [];
@@ -137,15 +137,21 @@ export const processPath = async (path: string) => {
     const zipCollections = await Promise.all(
       _.map(zipFiles, async (i) => {
         const basePath = await join(path, i.name);
-        const zipContent = (await readZipFile(basePath)).files;
+        
+        // note: removed zip content read due to a platform-specific error
+        // const zipContent = (await readZipFile(basePath)).files;
+
+        // const zipCont = Object.keys(zipContent).map((i) => {
+        //   return {
+        //     name: i,
+        //     path: path,
+        //   };
+        // })
 
         return {
           collectionName: i.name.split(".")[0], // Extract the name of the collection from the zip file's name
           basePath,
-          content: Object.keys(zipContent).map((i) => ({
-            name: i,
-            path: path, // Note: This should ideally be the path inside the zip, not the parent directory path
-          })),
+          content: [],
           isArchive: true,
           processStatus: "Loaded",
         } as DocumentItem;
