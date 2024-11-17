@@ -20,7 +20,7 @@ const CollectionItem: React.FC<CollectionItemProps> = (props) => {
 
   const isProcessing = useMemo(() => {
     return props.processStatus === "Processing";
-  }, [props.processStatus])
+  }, [props.processStatus]);
 
   const statusColor = useMemo(() => {
     switch (props.processStatus) {
@@ -30,6 +30,8 @@ const CollectionItem: React.FC<CollectionItemProps> = (props) => {
         return "info";
       case "Processing":
         return "warning";
+      case "Failed":
+        return "danger";
     }
   }, [props.processStatus]);
 

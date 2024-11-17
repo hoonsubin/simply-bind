@@ -108,7 +108,7 @@ function App() {
           return !helpers.listContainsDocument(files, j);
         });
         
-        setFiles(_.concat(files, newFiles)); // Update the files state with processed items
+        setFiles(oldFiles => _.concat(oldFiles, newFiles)); // Update the files state with processed items
       })
       .finally(() => {
         setIsLoading(false);
@@ -141,10 +141,10 @@ function App() {
             ); // Convert each collection to a PDF
           } catch (e) {
             console.error(e);
-            setFailedFiles(_.concat(failedFiles, [file.basePath]));
+            setFailedFiles(old => _.concat(old, [file.basePath]));
             continue;
           }
-          setProcessedFiles(_.concat(processedFiles, file.basePath));
+          setProcessedFiles(old => _.concat(old, file.basePath));
 
           console.log({
             processedFiles,
