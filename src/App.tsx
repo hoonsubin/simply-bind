@@ -238,6 +238,7 @@ function App() {
 
                 <CProgress value={convertProgress} />
               </CListGroupItem>
+              {/* todo: add program log */}
             </CListGroup>
           </CCard>
         </CCol>
@@ -251,19 +252,17 @@ function App() {
             }}
           >
             {files.length > 0 ? (
-              <>
-                <CListGroup>
-                  {processableDocs.map((i, index) => {
-                    return (
-                      <CollectionItem
-                        key={index}
-                        collection={i}
-                        processStatus={i.status}
-                      />
-                    );
-                  })}
-                </CListGroup>
-              </>
+              <CListGroup>
+                {processableDocs.map((i, index) => {
+                  return (
+                    <CollectionItem
+                      key={index}
+                      collection={i}
+                      processStatus={i.status}
+                    />
+                  );
+                })}
+              </CListGroup>
             ) : (
               <CContainer
                 style={{
