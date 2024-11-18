@@ -9,6 +9,7 @@ import {
   CSpinner,
 } from "@coreui/react";
 import { useState, useMemo } from "react";
+import { open } from "@tauri-apps/plugin-shell";
 
 type CollectionItemProps = {
   collection: DocumentItem;
@@ -34,6 +35,14 @@ const CollectionItem: React.FC<CollectionItemProps> = (props) => {
         return "danger";
     }
   }, [props.processStatus]);
+
+  const onClickOpenImage = async (filePath: string) => {
+    try {
+      await open(filePath);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <CListGroupItem
@@ -75,7 +84,14 @@ const CollectionItem: React.FC<CollectionItemProps> = (props) => {
             >
               {props.collection.content.map((i) => {
                 return (
-                  <CListGroupItem key={crypto.randomUUID()}>
+                  <CListGroupItem
+                    as="button"
+                    onClick={() => {
+                      if (!props.collection.isArchive)
+                        onClickOpenImage(i.path);
+                    }}
+                    key={i.path}
+                  >
                     {i.name}
                   </CListGroupItem>
                 );

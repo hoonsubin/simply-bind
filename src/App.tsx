@@ -113,8 +113,8 @@ function App() {
         const newFiles = i.filter((j) => {
           return !helpers.listContainsDocument(files, j);
         });
-        
-        setFiles(oldFiles => _.concat(oldFiles, newFiles)); // Append new files to the existing files state
+
+        setFiles((oldFiles) => _.concat(oldFiles, newFiles)); // Append new files to the existing files state
       })
       .finally(() => {
         setIsLoading(false); // Hide loading effect after file processing is complete
@@ -147,10 +147,10 @@ function App() {
             ); // Convert each collection to a PDF using helper function
           } catch (e) {
             console.error(e);
-            setFailedFiles(old => _.concat(old, [file.basePath])); // Add the failed file path to the failed files list
+            setFailedFiles((old) => _.concat(old, [file.basePath])); // Add the failed file path to the failed files list
             continue;
           }
-          setProcessedFiles(old => _.concat(old, file.basePath)); // Add the successfully processed file path to the processed files list
+          setProcessedFiles((old) => _.concat(old, file.basePath)); // Add the successfully processed file path to the processed files list
 
           console.log({
             processedFiles,
@@ -180,7 +180,7 @@ function App() {
       }}
     >
       <CRow>
-        <CCol>
+        <CCol className="left-panel">
           <CCard
             style={{
               height: "100%",
@@ -198,6 +198,9 @@ function App() {
                 >
                   Add Collections
                 </CButton>
+                {files.length > 0 && (
+                  <small>Loaded {files.length} collections</small>
+                )}
               </CListGroupItem>
               <CListGroupItem className="d-grid gap-2">
                 <CInputGroup className="has-validation">
@@ -226,13 +229,19 @@ function App() {
                 </CButton>
               </CListGroupItem>
               <CListGroupItem>
-                <h1>Progress</h1>
+                <h2>Progress</h2>
+                <small>Converted {processedFiles.length} files</small>
+                <br />
+                {failedFiles.length > 0 && (
+                  <small>Failed to convert {failedFiles.length} files</small>
+                )}
+
                 <CProgress value={convertProgress} />
               </CListGroupItem>
             </CListGroup>
           </CCard>
         </CCol>
-        <CCol>
+        <CCol className="right-panel">
           {/* Display processed files and collections */}
           <div
             style={{
