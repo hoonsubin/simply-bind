@@ -174,7 +174,10 @@ function App() {
             continue;
           }
           setProcessedFiles((old) => _.concat(old, file.basePath)); // Add the successfully processed file path to the processed files list
-          addSystemLog(`Converted ${file.collectionName} into a PDF file`, "info");
+          addSystemLog(
+            `Converted ${file.collectionName} into a PDF file`,
+            "info"
+          );
           console.log({
             processedFiles,
             failedFiles,
@@ -205,12 +208,14 @@ function App() {
         position: "relative",
       }}
     >
-      <CRow>
+      <CRow style={{ height: "90vh" }}>
         <CCol className="left-panel">
           <CCard
             style={{
               height: "100%",
               width: "100%",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <CListGroup>
@@ -239,7 +244,14 @@ function App() {
                     Where to save
                   </CButton>
                   {outputPath && (
-                    <CInputGroupText>{outputPath}</CInputGroupText>
+                    <CInputGroupText
+                      style={{
+                        maxWidth: "100%",
+                        overflowY: "auto",
+                      }}
+                    >
+                      {outputPath}
+                    </CInputGroupText>
                   )}
                 </CInputGroup>
               </CListGroupItem>
@@ -265,7 +277,6 @@ function App() {
 
                 <CProgress value={convertProgress} />
               </CListGroupItem>
-              {/* todo: add program log */}
               <CListGroupItem
                 style={{
                   display: "flex",
@@ -274,35 +285,22 @@ function App() {
                 }}
               >
                 <h2>Program Log</h2>
-                {/* todo: need to improve the element responsiveness */}
-                {/* <CFormTextarea
-                style={{
-                  height: "20rem",
-                  overflowX: "hidden",
-                  overflowY: "auto",
-                }}
-                  placeholder="Readonly textarea"
-                  aria-label="Readonly textarea example"
-                  disabled
-                  readOnly
-                  value="hello world"
-                >
-                </CFormTextarea> */}
 
                 <SystemLog logs={systemLogs} />
               </CListGroupItem>
             </CListGroup>
           </CCard>
         </CCol>
-        <CCol className="right-panel">
+        <CCol
+          className="right-panel"
+          style={{
+            height: "90vh",
+            overflowX: "hidden",
+            overflowY: "auto",
+          }}
+        >
           {/* Display processed files and collections */}
-          <div
-            style={{
-              height: "90vh",
-              overflowX: "hidden",
-              overflowY: "auto",
-            }}
-          >
+          <div>
             {files.length > 0 ? (
               <CListGroup>
                 {processableDocs.map((i, index) => {

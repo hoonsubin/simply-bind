@@ -24,8 +24,7 @@ const SystemLog: React.FC<SystemLogProps> = ({ logs }) => {
         height: "100%",
       }}
     >
-      <CCardBody>
-        <div
+      <CCardBody
           ref={logContainerRef}
           style={{
             whiteSpace: "pre-wrap", // to preserve whitespace and line breaks
@@ -48,8 +47,7 @@ const SystemLog: React.FC<SystemLogProps> = ({ logs }) => {
           ) : (
             <div>No messages</div>
           )}
-        </div>
-      </CCardBody>
+        </CCardBody>
     </CCard>
   );
 };
