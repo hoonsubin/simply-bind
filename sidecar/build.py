@@ -4,5 +4,5 @@ PyInstaller.__main__.run([
     './src/app.py',
     '--onefile',
     '--windowed',
-    '--name=python-script'
+    '--name=python-script' # need to suffix this with the Rust -$TARGET_TRIPLE
 ])
