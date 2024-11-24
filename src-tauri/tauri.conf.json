@@ -24,7 +24,7 @@
       }
     }
   },
-  "productName": "img-to-pdf-converter",
+  "productName": "simply-bind",
   "version": "0.1.0",
   "identifier": "com.hoonkim.app",
   "plugins": {},
@@ -34,7 +34,7 @@
     },
     "windows": [
       {
-        "title": "Image to PDF binder",
+        "title": "Simply Bind",
         "width": 1280,
         "height": 800
       }
