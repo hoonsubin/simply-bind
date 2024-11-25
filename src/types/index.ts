@@ -11,3 +11,9 @@ export interface DocumentItem {
   isArchive: boolean;
   content: FileItem[];
 }
+
+export interface LogMessage {
+  message: string;
+  timestamp: Date;
+  msgStatus: "info" | "warning" | "error"
+}
