@@ -38,6 +38,7 @@ def compress_image_to_jpg(image, image_name):
             return tmp.name
 
 def images_to_be_converted(src_path: str):
+    # todo: ensure the order of the images are correct
     # handling zip file contents
     if src_path.lower().endswith('.zip'):
         with zipfile.ZipFile(src_path, "r") as zip_file:
