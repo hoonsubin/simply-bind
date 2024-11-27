@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
-import { DocumentItem, ProcessStatus } from "./types"; // Import custom types for document and file items
+import { DocumentItem, ProcessStatus, LogMessage } from "./types"; // Import custom types for document and file items
 import {
   CButton,
   CCard,
@@ -17,6 +17,7 @@ import * as helpers from "./helpers"; // Custom helper functions
 import _ from "lodash"; // Utility library
 import "@coreui/coreui/dist/css/coreui.min.css"; // Import CoreUI CSS
 import CollectionItem from "./components/CollectionItem";
+import SystemLog from "./components/SystemLog";
 
 // Define a new interface that extends DocumentItem with an additional status field
 interface ProcessableDoc extends DocumentItem {
@@ -30,6 +31,20 @@ function App() {
   const [processingFileNo, setProcessingFileNo] = useState<number | null>(null); // Index of the file being processed
   const [processedFiles, setProcessedFiles] = useState<string[]>([]); // List of paths to files that have been successfully processed
   const [failedFiles, setFailedFiles] = useState<string[]>([]); // List of paths to files that failed processing
+  const [systemLogs, setSystemLog] = useState<LogMessage[]>([]);
+
+  const addSystemLog = (
+    message: string,
+    type: "info" | "warning" | "error"
+  ) => {
+    setSystemLog((i) =>
+      _.concat(i, {
+        message: message,
+        timestamp: new Date(),
+        msgStatus: type,
+      })
+    );
+  };
 
   // Calculate the conversion progress as a percentage based on the number of files processed
   const convertProgress = useMemo(() => {
@@ -77,6 +92,9 @@ function App() {
       .then((i) => {
         setOutputPath(i); // Update outputPath state with the selected directory path
       })
+      .catch((err) => {
+        addSystemLog(err.message, "error");
+      })
       .finally(() => {
         setIsLoading(false); // Hide loading effect after dialog closes
       });
@@ -115,6 +133,10 @@ function App() {
         });
 
         setFiles((oldFiles) => _.concat(oldFiles, newFiles)); // Append new files to the existing files state
+        addSystemLog(`Added ${newFiles.length} new files`, "info");
+      })
+      .catch((err) => {
+        addSystemLog(err.message, "error");
       })
       .finally(() => {
         setIsLoading(false); // Hide loading effect after file processing is complete
@@ -145,13 +167,17 @@ function App() {
               file.basePath,
               outputPath
             ); // Convert each collection to a PDF using helper function
-          } catch (e) {
-            console.error(e);
+          } catch (e: any) {
             setFailedFiles((old) => _.concat(old, [file.basePath])); // Add the failed file path to the failed files list
+
+            addSystemLog(e.message, "error");
             continue;
           }
           setProcessedFiles((old) => _.concat(old, file.basePath)); // Add the successfully processed file path to the processed files list
-
+          addSystemLog(
+            `Converted ${file.collectionName} into a PDF file`,
+            "info"
+          );
           console.log({
             processedFiles,
             failedFiles,
@@ -164,6 +190,9 @@ function App() {
     _exportPdf()
       .catch((err) => {
         console.error(err);
+      })
+      .catch((err) => {
+        addSystemLog(err.message, "error");
       })
       .finally(() => {
         setIsLoading(false); // Hide loading effect after processing is complete
@@ -179,15 +208,19 @@ function App() {
         position: "relative",
       }}
     >
-      <CRow>
+      <CRow style={{ height: "90vh" }}>
         <CCol className="left-panel">
           <CCard
             style={{
               height: "100%",
               width: "100%",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
-            <CListGroup>
+            <CListGroup
+              style={{ flex: 1, display: "flex", flexDirection: "column" }}
+            >
               <CListGroupItem className="d-grid gap-2">
                 {/* Button to select files or folders */}
                 <CButton
@@ -213,7 +246,14 @@ function App() {
                     Where to save
                   </CButton>
                   {outputPath && (
-                    <CInputGroupText>{outputPath}</CInputGroupText>
+                    <CInputGroupText
+                      style={{
+                        maxWidth: "100%",
+                        overflowY: "auto",
+                      }}
+                    >
+                      {outputPath}
+                    </CInputGroupText>
                   )}
                 </CInputGroup>
               </CListGroupItem>
@@ -227,6 +267,7 @@ function App() {
                 >
                   Convert
                 </CButton>
+                {/* todo: add cancel button */}
               </CListGroupItem>
               <CListGroupItem>
                 <h2>Progress</h2>
@@ -238,19 +279,32 @@ function App() {
 
                 <CProgress value={convertProgress} />
               </CListGroupItem>
-              {/* todo: add program log */}
+              <CListGroupItem
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  minHeight: 0,
+                  paddingBottom: "16px",
+                }}
+              >
+                <h2>Program Log</h2>
+
+                <SystemLog logs={systemLogs} />
+              </CListGroupItem>
             </CListGroup>
           </CCard>
         </CCol>
-        <CCol className="right-panel">
+        <CCol
+          className="right-panel"
+          style={{
+            height: "90vh",
+            overflowX: "hidden",
+            overflowY: "auto",
+          }}
+        >
           {/* Display processed files and collections */}
-          <div
-            style={{
-              height: "90vh",
-              overflowX: "hidden",
-              overflowY: "auto",
-            }}
-          >
+          <div>
             {files.length > 0 ? (
               <CListGroup>
                 {processableDocs.map((i, index) => {
