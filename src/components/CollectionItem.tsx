@@ -62,7 +62,7 @@ const CollectionItem: React.FC<CollectionItemProps> = (props) => {
     >
       <CContainer>
         <CRow>
-          {isProcessing && <CSpinner variant="grow" className="m-1" />} // Showing a spinner if the item is processing
+          {isProcessing && <CSpinner variant="grow" className="m-1" />}
           <h4>{props.collection.collectionName}</h4> {/* Displaying the name of the collection */}
         </CRow>
         <CRow>
@@ -80,7 +80,7 @@ const CollectionItem: React.FC<CollectionItemProps> = (props) => {
           </div>
         </CRow>
         {props.collection.content.length > 0 && (
-          <CCollapse visible={isItemOpen}> // Collapsible section containing items of the collection
+          <CCollapse visible={isItemOpen}>
             <CListGroup
               className="mt-3"
               style={{

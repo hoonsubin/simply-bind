@@ -150,8 +150,10 @@ export const processPath = async (path: string) => {
         //   };
         // })
 
+        //const fileName = i.name.split(".").slice(0, -1).join(".");
+
         return {
-          collectionName: i.name.split(".")[0], // Extract the name of the collection from the zip file's name
+          collectionName: i.name.split(".").slice(0, -1).join("."), // Extract the name of the collection from the zip file's name excluding the extension
           basePath,
           content: [],
           isArchive: true,
