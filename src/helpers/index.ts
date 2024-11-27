@@ -114,13 +114,20 @@ export const processPath = async (path: string) => {
       } as FileItem))
     );
 
+    // Sort files by name
+    collectionContent.sort((a, b) => {
+      return a.name.localeCompare(b.name, 'en', {numeric: true})
+    })
+
     // Create a DocumentItem for the collection of images in the base directory
     const rootCollection: DocumentItem = {
       collectionName: collectionName,
       basePath: path,
-      content: _.sortBy(collectionContent, ["name"]), // Sort files by name
+      content: collectionContent,
       isArchive: false,
     };
+
+    
 
     processedFiles.push(rootCollection);
   }
