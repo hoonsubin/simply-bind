@@ -218,7 +218,9 @@ function App() {
               flexDirection: "column",
             }}
           >
-            <CListGroup>
+            <CListGroup
+              style={{ flex: 1, display: "flex", flexDirection: "column" }}
+            >
               <CListGroupItem className="d-grid gap-2">
                 {/* Button to select files or folders */}
                 <CButton
@@ -279,9 +281,11 @@ function App() {
               </CListGroupItem>
               <CListGroupItem
                 style={{
+                  flex: 1,
                   display: "flex",
                   flexDirection: "column",
-                  alignItems: "stretch",
+                  minHeight: 0,
+                  paddingBottom: "16px",
                 }}
               >
                 <h2>Program Log</h2>
