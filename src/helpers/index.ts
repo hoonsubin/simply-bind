@@ -114,13 +114,20 @@ export const processPath = async (path: string) => {
       } as FileItem))
     );
 
+    // Sort files by name
+    collectionContent.sort((a, b) => {
+      return a.name.localeCompare(b.name, 'en', {numeric: true})
+    })
+
     // Create a DocumentItem for the collection of images in the base directory
     const rootCollection: DocumentItem = {
       collectionName: collectionName,
       basePath: path,
-      content: _.sortBy(collectionContent, ["name"]), // Sort files by name
+      content: collectionContent,
       isArchive: false,
     };
+
+    
 
     processedFiles.push(rootCollection);
   }
@@ -150,8 +157,10 @@ export const processPath = async (path: string) => {
         //   };
         // })
 
+        //const fileName = i.name.split(".").slice(0, -1).join(".");
+
         return {
-          collectionName: i.name.split(".")[0], // Extract the name of the collection from the zip file's name
+          collectionName: i.name.split(".").slice(0, -1).join("."), // Extract the name of the collection from the zip file's name excluding the extension
           basePath,
           content: [],
           isArchive: true,
