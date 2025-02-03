@@ -40,7 +40,6 @@ export const convertToPdfSidecar = async (
 
   // Execute the command and log its output
   const output = await command.execute();
-  console.log(output);
 };
 
 /**
@@ -89,13 +88,10 @@ export const processPath = async (path: string) => {
   // Filter image files based on supported formats defined in appConfig
   const imageFiles = files.filter((file) => file.isFile && checkFileExtMatch(file.name, appConfig.supportedImgFormat));
 
-  console.log(`Found ${imageFiles.length} image files in ${path}`);
   // Filter zip files by their extension
   const zipFiles = files.filter((file) => file.isFile && checkFileExtMatch(file.name, ["zip"]));
-  console.log(`Found ${zipFiles.length} zip archives in ${path}`);
   // Filter folders (directories)
   const folders = files.filter((file) => !!file.isDirectory);
-  console.log(`Found ${folders.length} folders in ${path}`);
 
   if (!imageFiles.length && !zipFiles.length && !folders.length) {
     throw new Error(`${path} is empty`);

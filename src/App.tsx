@@ -178,11 +178,6 @@ function App() {
             `Converted ${file.collectionName} into a PDF file`,
             "info"
           );
-          console.log({
-            processedFiles,
-            failedFiles,
-            processableDocs,
-          });
         }
       }
     };
